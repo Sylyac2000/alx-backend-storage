@@ -18,7 +18,7 @@ class Cache:
         return key
 
     def get(self, key: str,
-            fn: Callable = None) -> Union[str, bytes, int, float]:
+            fn: Optional[Callable] = None) -> str:
         """ return element """
         data = self._redis.get(key)
         if fn:
@@ -27,8 +27,8 @@ class Cache:
 
     def get_str(self, key: str) -> str:
         """ return a string"""
-        return self.get(key, lambda d: d.decode("utf-8"))
+        return key.decode('utf-8', 'strict')
 
     def get_int(self, key: str) -> int:
         """ return a int"""
-        return self.get(key, int)
+        return int(key)
