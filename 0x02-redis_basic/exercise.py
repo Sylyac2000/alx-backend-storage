@@ -6,19 +6,22 @@ from typing import Union, Callable, Optional
 from functools import wraps
 
 
+def count_calls(method: Callable) -> Callable:
+    """ count number of call"""
+    method_key = method.__qualname__
+
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        self._redis.incr(method_key)
+        return method(self, *args, **kwargs)
+    return wrapper
+
+
 class Cache:
 
     def __init__(self):
         self._redis = redis.Redis()
         self._redis.flushdb()
-
-    def count_calls(fn: Callable) -> Callable:
-        """ count number of call"""
-        @wraps(fn)
-        def wrapped(self, *args, **kwargs):
-            self._redis.incr(fn.__qualname__)
-            return fn(self, *args, **kwargs)
-        return wrapped
 
     @count_calls
     def store(self, data: Union[str, bytes, int, float]) -> str:
