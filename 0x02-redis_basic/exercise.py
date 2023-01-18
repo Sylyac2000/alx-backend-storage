@@ -6,16 +6,18 @@ from typing import Union, Callable, Optional
 from functools import wraps
 
 
-def call_history(fn: Callable) -> Callable:
+def call_history(method: Callable) -> Callable:
     """store the history of inputs and outputs for a particular function"""
-    @wraps(fn)
+    method_key = method.__qualname__
+    inputs = method_key + ':inputs'
+    outputs = method_key + ':outputs'
+
+    @wraps(method)
     def wrapped(self, *args, **kwargs):
-        inputs_key = "{}:inputs".format(fn.__qualname__)
-        self._redis.rpush(inputs_key, str(args))
-        output = fn(self, *args, **kwargs)
-        outputs_key = "{}:outputs".format(fn.__qualname__)
-        self._redis.rpush(outputs_key, output)
-        return output
+        self._redis.rpush(inputs, str(args))
+        resultat = method(self, *args, **kwargs)
+        self._redis.rpush(outputs, str(resultat))
+        return resultat
     return wrapped
 
 
