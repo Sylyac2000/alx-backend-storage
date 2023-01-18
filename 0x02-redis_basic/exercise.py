@@ -13,6 +13,7 @@ class Cache:
         self._redis.flushdb()
 
     def count_calls(fn: Callable) -> Callable:
+        """ count number of call"""
         @wraps(fn)
         def wrapped(self, *args, **kwargs):
             self._redis.incr(fn.__qualname__)
