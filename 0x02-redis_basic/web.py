@@ -8,11 +8,19 @@ count = 0
 
 def get_page(url: str) -> str:
     """ get content of a page"""
-    rc.set(f"cached:{url}", count)
+    r = redis.Redis()
+    count_key = f"count:{url}"
+    cache_key = f"cache:{url}"
+
+    if r.exists(cache_key):
+        r.incr(count_key)
+        return r.get(cache_key).decode()
+
     response = requests.get(url)
-    rc.incr(f"count:{url}")
-    rc.setex(f"cached:{url}", 10, rc.get(f"cached:{url}"))
-    return response.text
+    html = response.text
+    r.set(cache_key, html, ex=10)
+    r.incr(count_key)
+    return html
 
 
 if __name__ == "__main__":
