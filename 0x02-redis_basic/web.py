@@ -1,26 +1,34 @@
 #!/usr/bin/env python3
-""" this module is about Implementing an expiring web cache and tracker"""
-import requests
+"""
+this module is about Implementing an expiring web cache and tracker
+"""
+from typing import Callable
+from functools import wraps
 import redis
-rc = redis.Redis()
-count = 0
+import requests
+redis_store = redis.Redis()
 
 
+def cache_and_count(method: Callable) -> Callable:
+    """counts how many times an url is called"""
+    @wraps(method)
+    def wrapper(url) -> str:
+        redis_store.incr(f'count:{url}')
+        result = redis_store.get(f'result:{url}')
+        if result:
+            return result.decode('utf-8')
+        result = method(url)
+        redis_store.set(f'count:{url}', 0)
+        redis_store.setex(f'result:{url}', 10, result)
+        return result
+    return wrapper
+
+
+@cache_and_count
 def get_page(url: str) -> str:
-    """ get content of a page"""
-    r = redis.Redis()
-    count_key = f"count:{url}"
-    cache_key = f"cache:{url}"
-
-    if r.exists(cache_key):
-        r.incr(count_key)
-        return r.get(cache_key).decode()
-
+    """get a page and cache value"""
     response = requests.get(url)
-    html = response.text
-    r.set(cache_key, html, ex=10)
-    r.incr(count_key)
-    return html
+    return response.text
 
 
 if __name__ == "__main__":
