@@ -3,27 +3,18 @@
 from typing import Callable
 import requests
 import redis
-import functools
+count = 0
 
 
-def cache_and_count(method: Callable) -> Callable:
-    """count how many times """
-    @functools.wraps(method)
-    def wrapper(url) -> str:
-        r = redis.Redis()
-        r.incr(f"count:{url}")
-        result = r.get(f'result:{url}')
-        if result:
-            return result.decode('utf-8')
-        result = method(url)
-        r.set(f'count:{url}', 0)
-        r.setex(f'result:{url}', 10, result)
-    return wrapper
-
-
-@cache_and_count
 def get_page(url: str) -> str:
     """ get content of a page"""
+    rc = redis.Redis()
+    rc.set(f"cached:{url}", count)
     response = requests.get(url)
-    html = response.text
-    return html
+    rc.incr(f"count:{url}")
+    rc.setex(f"cached:{url}", 10, rc.get(f"cached:{url}"))
+    return response.text
+
+
+if __name__ == "__main__":
+    get_page('https://abidjan.net/')
