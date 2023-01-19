@@ -6,6 +6,20 @@ from typing import Union, Callable, Optional
 from functools import wraps
 
 
+def replay(method: Callable) -> None:
+    """displays the history of calls of a particular function"""
+    method_key = method.__qualname__
+    inputs = method_key + ':inputs'
+    outputs = method_key + ':outputs'
+    redis = method.__self__._redis
+    method_count = redis.get(method_key).decode('utf-8')
+    print(f'{method_key} was called {method_count} times:')
+    IOTuple = zip(redis.lrange(inputs, 0, -1), redis.lrange(outputs, 0, -1))
+    for inp, out in list(IOTuple):
+        attr, data = inp.decode("utf-8"), out.decode("utf-8")
+        print(f'{method_key}(*{attr}) -> {data}')
+
+
 def call_history(method: Callable) -> Callable:
     """store the history of inputs and outputs for a particular function"""
     method_key = method.__qualname__
