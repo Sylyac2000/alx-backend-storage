@@ -1,26 +1,23 @@
 #!/usr/bin/env python3
 """ this module is about Implementing an expiring web cache and tracker"""
-
+from typing import Callable
 import requests
 import redis
 import functools
 
 
-def cache_and_count(func):
-    """cache the output"""
-    @functools.wraps(func)
-    def wrapper(url: str):
+def cache_and_count(method: Callable) -> Callable:
+    """count how many times """
+    @functools.wraps(method)
+    def wrapper(url) -> str:
         r = redis.Redis()
-        count_key = f"count:{url}"
-        cache_key = f"cache:{url}"
-        if r.exists(cache_key):
-            r.incr(count_key)
-            return r.get(cache_key).decode()
-
-        result = func(url)
-        r.set(cache_key, result, ex=10)
-        r.incr(count_key)
-        return result
+        r.incr(f"count:{url}")
+        result = r.get(f'result:{url}')
+        if result:
+            return result.decode('utf-8')
+        result = method(url)
+        r.set(f'count:{url}', 0)
+        r.setex(f'result:{url}', 10, result)
     return wrapper
 
 
